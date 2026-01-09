@@ -1,5 +1,6 @@
 use serde_json::json;
 use socketioxide::extract::SocketRef;
+use tracing::info;
 
 use crate::{events::room::event::RoomEvent, game::win::Win};
 
@@ -15,14 +16,22 @@ impl RoomEvent for GameWinEvent {
         _s: &SocketRef,
         _payload: Option<Self::Payload>,
     ) {
+        info!("Notifying room {} of game win event", room_name);
         if let Some(payload) = _payload {
-            let _ = _s.to(room_name).emit(
-                Self::EVENT_NAME,
-                &json!({
-                    "player_id": payload.player_id,
-                    "seq": payload.seq,
-                }),
+            info!(
+                "Emitting game win event for player {:?} with seq {:?}",
+                payload.player_id, payload.win_seq
             );
+            let _ = _s
+                .within(room_name)
+                .emit(
+                    Self::EVENT_NAME,
+                    &json!({
+                        "player_id": payload.player_id,
+                        "seq": payload.win_seq,
+                    }),
+                )
+                .await;
         }
     }
 }

@@ -137,6 +137,10 @@ export default function Home() {
       onGameWin: (payload) => {
         console.log("Game won:", payload)
         const winner: Stone = payload.player_id === "Black" ? "black" : "white"
+        const winnerName = winner === "black" ? "Black" : "White"
+        const winMessage = payload.is_by_five 
+          ? `${winnerName} player wins by 5 in a row!`
+          : `${winnerName} player wins by captures!`
         
         setGameState((prev) => ({
           ...prev,
@@ -144,7 +148,7 @@ export default function Home() {
           status: "finished",
         }))
         
-        toast(`${winner === "black" ? "Black" : "White"} player wins!`, "default")
+        toast(winMessage, "default")
       },
       onGameEnded: (payload) => {
         console.log("Game ended:", payload.message)

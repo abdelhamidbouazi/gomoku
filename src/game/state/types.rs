@@ -45,7 +45,7 @@ pub struct GameState {
     pub board: Vec<Vec<Option<Player>>>, // 2D board representation
     pub history: Vec<GameResult>,        // History of game results
     pub status: GameStatus,
-    pub captures: HashMap<Player, HashSet<usize>>, // Captures per player
+    pub captures: HashMap<Player, (usize, HashSet<usize>)>, // Captures per player
 }
 
 #[derive(Copy, Clone, PartialEq, Deserialize, Serialize, Debug)]

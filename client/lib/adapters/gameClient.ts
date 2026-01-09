@@ -26,7 +26,8 @@ export interface GameStartedPayload {
 
 export interface GameWinPayload {
   player_id: "White" | "Black"
-  seq: number[]
+  seq: number[] | null
+  is_by_five: boolean
 }
 
 export interface GameEndedPayload {

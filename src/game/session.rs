@@ -47,6 +47,16 @@ impl GameSession {
         info!("Current board state:");
         info!("History length: {}", self.state.history.len());
 
+        // Print captures history
+        info!("Captures history:");
+
+        for (player, (count, indices)) in &self.state.captures {
+            info!(
+                "Player {:?} has {} captures at moves: {:?}",
+                player, count, indices
+            );
+        }
+
         let size = self.state.board.len();
 
         // Print column headers
@@ -124,7 +134,22 @@ impl GameSession {
 
         // check if there is a win
         if let Some(res) = game_result {
+            // notify players about the move
+            info!("Notifying players about the board cell update");
+            self.room
+                .notify_room::<BoardCellEvent>(_s, Some(res.game_move.into()))
+                .await;
             info!("Move resulted in a game result: {:?}", res);
+            // notify players about the captures
+            if let Some(capture) = &res.capture {
+                info!(
+                    "Player {:?} made a capture of {} pieces",
+                    capture.player_id,
+                    capture.seq.len()
+                );
+                // emit captures
+                capture.emit(_s, self).await;
+            }
             if let Some(winner) = res.winner.clone() {
                 info!("Player {:?} has won the game!", winner.player_id);
                 // notify players about the win
@@ -134,25 +159,6 @@ impl GameSession {
                 // set game status to finished
                 info!("Ending game session");
                 self.end_game(_s).await;
-            } else {
-                // notify players about the move
-                info!("Notifying players about the board cell update");
-                self.room
-                    .notify_room::<BoardCellEvent>(
-                        _s,
-                        Some(res.game_move.into()),
-                    )
-                    .await;
-                // notify players about the captures
-                if let Some(capture) = &res.capture {
-                    info!(
-                        "Player {:?} made a capture of {} pieces",
-                        capture.player_id,
-                        capture.seq.len()
-                    );
-                    // emit captures
-                    capture.emit(_s, self).await;
-                }
             }
             info!("Updating game state with the move");
             // commit the result

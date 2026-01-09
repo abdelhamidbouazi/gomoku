@@ -104,16 +104,23 @@ impl GameState {
 
     pub fn eval_move(&self, game_move: GameMove) -> GameResult {
         info!("Finding captures for the move");
-        let cap = Capture::find_capture(&self.board, &game_move);
+        let captures = Capture::find_captures(&self.board, &game_move);
 
-        info!("Captures found: {:?}", cap);
+        info!("Captures found: {:?}", captures);
 
         info!("Checking for win condition");
 
+        let winner = Win::check_for_win(
+            &game_move,
+            &captures,
+            &self.board,
+            &self.captures,
+        );
+
         let res = GameResult {
             game_move,
-            capture: cap.clone(),
-            winner: Win::check_for_win(&game_move, &cap),
+            capture: captures,
+            winner,
         };
 
         res
@@ -132,9 +139,10 @@ impl GameState {
             let entry = self
                 .captures
                 .entry(capture.player_id.opponent())
-                .or_insert_with(HashSet::new);
+                .or_insert_with(|| (0, HashSet::new()));
             info!("Adding capture at move index {}", self.history.len());
-            entry.insert(self.history.len());
+            entry.0 += capture.num_captures;
+            entry.1.insert(self.history.len());
             // remove captured pieces from the board
             for (x, y) in &capture.seq {
                 info!("Removing captured piece at ({}, {})", x, y);
@@ -176,7 +184,8 @@ impl GameState {
                     if let Some(capture_set) =
                         self.captures.get_mut(&capture.player_id.opponent())
                     {
-                        capture_set.remove(&gs_index);
+                        capture_set.0 -= capture.num_captures;
+                        capture_set.1.remove(&gs_index);
                     }
                 }
                 ret.push(BoardCell {
