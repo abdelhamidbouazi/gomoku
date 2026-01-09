@@ -150,7 +150,7 @@ impl GameSession {
                 // emit captures
                 capture.emit(_s, self).await;
             }
-            if let Some(winner) = res.winner.clone() {
+            if let Some(winner) = res.winner() {
                 info!("Player {:?} has won the game!", winner.player_id);
                 // notify players about the win
                 self.room

@@ -25,6 +25,12 @@ impl Default for GameState {
     }
 }
 
+impl GameResult {
+    pub fn winner(&self) -> Option<Win> {
+        self.win.as_ref().filter(|win| !win.is_flanked).cloned()
+    }
+}
+
 impl GameState {
     pub fn new(size: u16) -> Self {
         GameState {
@@ -115,12 +121,19 @@ impl GameState {
             &captures,
             &self.board,
             &self.captures,
-        );
+        )
+        .or_else(|| {
+            if let Some(mut winner) = self.get_last_game_winner() {
+                winner.is_flanked = false;
+                return Some(winner);
+            }
+            None
+        });
 
         let res = GameResult {
             game_move,
             capture: captures,
-            winner,
+            win: winner,
         };
 
         res
@@ -152,7 +165,7 @@ impl GameState {
 
         // check if there is a winner and finish the game
         info!("Checking for game completion");
-        if result.winner.is_some() {
+        if result.winner().is_some() {
             self.status = GameStatus::Finished;
         }
 
@@ -201,5 +214,13 @@ impl GameState {
             }
         }
         Ok(ret)
+    }
+
+    // check if player has won in last game by lining 5 in a row
+    pub fn get_last_game_winner(&self) -> Option<Win> {
+        if let Some(last) = self.history.last() {
+            return last.win.clone();
+        }
+        None
     }
 }

@@ -32,7 +32,7 @@ pub struct GameMove {
 pub struct GameResult {
     pub game_move: GameMove,
     pub capture: Option<Capture>,
-    pub winner: Option<Win>,
+    pub win: Option<Win>,
 }
 
 #[derive(PartialEq)]
