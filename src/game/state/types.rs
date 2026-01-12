@@ -41,11 +41,19 @@ pub enum GameStatus {
     Finished,
 }
 
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub struct GameTurn {
+    pub current_player: Player,
+    pub turn: usize,
+    pub forbidden_sequences: Vec<(usize, usize)>,
+}
+
 pub struct GameState {
     pub board: Vec<Vec<Option<Player>>>, // 2D board representation
     pub history: Vec<GameResult>,        // History of game results
     pub status: GameStatus,
     pub captures: HashMap<Player, (usize, HashSet<usize>)>, // Captures per player
+    pub turn: GameTurn,
 }
 
 #[derive(Copy, Clone, PartialEq, Deserialize, Serialize, Debug)]

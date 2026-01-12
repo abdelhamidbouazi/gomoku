@@ -34,6 +34,12 @@ export interface GameEndedPayload {
   message: string
 }
 
+export interface GameTurnPayload {
+  currentPlayer: "White" | "Black"
+  forbiddenSequences: Array<[number, number]>
+  turn: number
+}
+
 export interface EventErrorPayload {
   message: string
 }
@@ -46,6 +52,7 @@ export interface RoomErrorPayload {
 export interface GameEventHandlers {
   onGameStarted?: (payload: GameStartedPayload) => void
   onBoardCell?: (payload: BoardCellPayload) => void
+  onGameTurn?: (payload: GameTurnPayload) => void
   onGameWin?: (payload: GameWinPayload) => void
   onGameEnded?: (payload: GameEndedPayload) => void
   onPlayerLeave?: () => void
@@ -145,6 +152,12 @@ class GameClient {
     this.socket.on("board-cell", (payload: BoardCellPayload) => {
       console.log("Board cell update:", payload)
       this.eventHandlers.onBoardCell?.(payload)
+    })
+
+    // game-turn event - when turn changes
+    this.socket.on("game-turn", (payload: GameTurnPayload) => {
+      console.log("Game turn:", payload)
+      this.eventHandlers.onGameTurn?.(payload)
     })
 
     // game-win event - when a player wins

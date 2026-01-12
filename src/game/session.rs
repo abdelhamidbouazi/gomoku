@@ -6,11 +6,12 @@ use tracing::info;
 use crate::{
     events::room::{
         board::BoardCellEvent, game_ended::GameEndedEvent,
-        game_started::GameStartedEvent, win::GameWinEvent,
+        game_started::GameStartedEvent, game_turn::GameTurnEvent,
+        win::GameWinEvent,
     },
     game::{
         room::Room,
-        state::types::{GameMode, GameState, Player},
+        state::types::{GameMode, GameState, GameStatus, Player},
     },
     shared::types::BoardSize,
 };
@@ -106,6 +107,10 @@ impl GameSession {
         self.room.join_room(_s);
         // send notification to all players in the room that the game has started
         self.room.notify_room::<GameStartedEvent>(_s, None).await;
+        // notify about the first turn
+        self.room
+            .notify_room::<GameTurnEvent>(_s, Some(self.state.turn.clone()))
+            .await;
     }
 
     // Action: Process a player's move
@@ -166,6 +171,21 @@ impl GameSession {
 
             // Print the board after updating
             self.print_board();
+
+            // If game is still ongoing, notify about the next turn
+            if self.state.status == GameStatus::Ongoing {
+                let current_player = self.state.get_current_player();
+                info!(
+                    "Notifying about next turn for player {:?}",
+                    current_player
+                );
+                self.room
+                    .notify_room::<GameTurnEvent>(
+                        _s,
+                        Some(self.state.turn.clone()),
+                    )
+                    .await;
+            }
         }
 
         Ok(())

@@ -11,6 +11,7 @@ interface BoardProps {
   showCoordinates: boolean
   onCellClick: (row: number, col: number) => void
   disabled?: boolean
+  forbiddenMoves?: Array<[number, number]>
 }
 
 export function Board({
@@ -20,15 +21,63 @@ export function Board({
   showCoordinates,
   onCellClick,
   disabled = false,
+  forbiddenMoves = [],
 }: BoardProps) {
   const [hoveredCell, setHoveredCell] = React.useState<{
     row: number
     col: number
   } | null>(null)
 
+  React.useEffect(() => {
+    console.log("Forbidden moves updated:", forbiddenMoves)
+    console.log("Forbidden moves length:", forbiddenMoves?.length)
+    if (forbiddenMoves && forbiddenMoves.length > 0) {
+      console.log("Forbidden cells:", forbiddenMoves)
+    }
+  }, [forbiddenMoves])
+
+  // Check if a cell is in the forbidden moves list
+  const isCellForbidden = React.useCallback(
+    (row: number, col: number): boolean => {
+      if (!forbiddenMoves || forbiddenMoves.length === 0) {
+        return false
+      }
+      
+      const result = forbiddenMoves.some((cell) => {
+        // Handle both array [x, y] and object {0: x, 1: y} formats
+        if (Array.isArray(cell)) {
+          const [x, y] = cell
+          const matches = x === col && y === row
+          if (matches) {
+            console.log(`Cell [${row}, ${col}] is forbidden! Matched [${x}, ${y}]`)
+          }
+          return matches
+        } else if (typeof cell === "object" && cell !== null) {
+          const x = (cell as any)[0]
+          const y = (cell as any)[1]
+          const matches = x === col && y === row
+          if (matches) {
+            console.log(`Cell [${row}, ${col}] is forbidden! Matched object [${x}, ${y}]`)
+          }
+          return matches
+        }
+        console.warn("Invalid forbidden cell format:", cell)
+        return false
+      })
+      
+      return result
+    },
+    [forbiddenMoves]
+  )
+
   const handleCellHover = React.useCallback(
     (row: number, col: number) => {
       if (disabled || row < 0 || col < 0) {
+        setHoveredCell(null)
+        return
+      }
+      // Don't allow hover on forbidden cells
+      if (isCellForbidden(row, col)) {
         setHoveredCell(null)
         return
       }
@@ -38,7 +87,7 @@ export function Board({
         setHoveredCell(null)
       }
     },
-    [board, disabled]
+    [board, disabled, isCellForbidden]
   )
 
   const size = board.length
@@ -76,6 +125,7 @@ export function Board({
                   ? currentPlayer
                   : null
               }
+              isForbidden={isCellForbidden(rowIndex, colIndex)}
             />
           ))
         )}

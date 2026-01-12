@@ -8,11 +8,21 @@ use crate::{
         capture::Capture,
         state::{
             GameMove, GameStatus, Player,
-            types::{GameResult, GameState},
+            types::{GameResult, GameState, GameTurn},
         },
         win::Win,
     },
 };
+
+impl Default for GameTurn {
+    fn default() -> Self {
+        GameTurn {
+            current_player: Player::Black,
+            turn: 0,
+            forbidden_sequences: vec![],
+        }
+    }
+}
 
 impl Default for GameState {
     fn default() -> Self {
@@ -21,6 +31,7 @@ impl Default for GameState {
             history: vec![],
             status: GameStatus::Ongoing,
             captures: std::collections::HashMap::new(),
+            turn: GameTurn::default(),
         }
     }
 }
@@ -38,6 +49,7 @@ impl GameState {
             history: vec![],
             status: GameStatus::Ongoing,
             captures: std::collections::HashMap::new(),
+            turn: GameTurn::default(),
         }
     }
 
@@ -176,6 +188,8 @@ impl GameState {
         info!("Adding move to history");
         // add the result to history
         self.history.push(result);
+        info!("Updating turn information");
+        self.turn.update(&self.get_current_player(), &self.board);
         Ok(())
     }
 

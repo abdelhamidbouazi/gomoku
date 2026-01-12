@@ -13,6 +13,7 @@ interface CellProps {
   onCellClick: (row: number, col: number) => void
   onCellHover?: (row: number, col: number) => void
   hoverStone?: Stone | null
+  isForbidden?: boolean
 }
 
 export function Cell({
@@ -24,15 +25,23 @@ export function Cell({
   onCellClick,
   onCellHover,
   hoverStone,
+  isForbidden = false,
 }: CellProps) {
   const displayStone = hoverStone || stone
+
+  // log if cell is forbidden
+  React.useEffect(() => {
+    if (!isForbidden) return;
+    console.log(`Cell at [${row}, ${col}] is forbidden.`, row, col);
+  }, [isForbidden]);
 
   return (
     <button
       className={cn(
-        "relative flex items-center justify-center aspect-square border border-border/50 transition-colors",
+        "relative flex items-center justify-center aspect-square border border-border/50 transition-all duration-200",
         "hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        isLastMove && "ring-2 ring-primary ring-offset-1"
+        isLastMove && "ring-2 ring-primary ring-offset-1",
+        isForbidden && !stone && "hover:bg-red-200/50 dark:hover:bg-red-800/30 cursor-not-allowed"
       )}
       onClick={() => onCellClick(row, col)}
       onMouseEnter={() => onCellHover?.(row, col)}
@@ -43,6 +52,9 @@ export function Cell({
       }}
       aria-label={`Cell ${row + 1}, ${col + 1}`}
     >
+      {isForbidden && !stone && (
+        <div className="absolute inset-0 bg-red-100/50 dark:bg-red-900/20 rounded-md transition-all duration-300 ease-in-out hover:inset-1" />
+      )}
       {displayStone && (
         <div
           className={cn(
@@ -57,6 +69,11 @@ export function Cell({
             height: "75%",
           }}
         />
+      )}
+      {isForbidden && !stone && (
+        <div className="absolute text-red-500 dark:text-red-600 font-bold text-lg select-none pointer-events-none">
+          ✕
+        </div>
       )}
       {showCoordinates && (
         <span className="absolute text-[0.5rem] text-muted-foreground opacity-30 pointer-events-none">

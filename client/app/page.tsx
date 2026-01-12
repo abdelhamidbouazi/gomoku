@@ -9,7 +9,7 @@ import { EndgameDialog } from "@/components/gomoku/EndgameDialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
-import { gameClient, type BoardCellPayload, type GameStartedPayload, type GameWinPayload, type GameEndedPayload } from "@/lib/adapters/gameClient"
+import { gameClient, type BoardCellPayload, type GameStartedPayload, type GameWinPayload, type GameEndedPayload, type GameTurnPayload } from "@/lib/adapters/gameClient"
 import {
   createBoard,
   placeMove,
@@ -54,6 +54,7 @@ export default function Home() {
     boardSize: defaultSettings.boardSize,
     mode: "local",
     players: defaultPlayers,
+    forbiddenMoves: [],
   }))
 
   // Setup connection status listener
@@ -134,6 +135,25 @@ export default function Home() {
           }
         })
       },
+      onGameTurn: (payload: GameTurnPayload) => {
+        console.log("Game turn update:", payload)
+        console.log("Forbidden sequences type:", typeof payload.forbiddenSequences)
+        console.log("Forbidden sequences:", JSON.stringify(payload.forbiddenSequences, null, 2))
+        
+        // Convert backend player format to frontend format
+        const currentPlayer: "black" | "white" = payload.currentPlayer === "Black" ? "black" : "white"
+        
+        setGameState((prev) => ({
+          ...prev,
+          currentPlayer,
+          forbiddenMoves: payload.forbiddenSequences,
+        }))
+        
+        // Log forbidden sequences
+        if (payload.forbiddenSequences.length > 0) {
+          console.log("Forbidden move sequences:", payload.forbiddenSequences)
+        }
+      },
       onGameWin: (payload) => {
         console.log("Game won:", payload)
         const winner: Stone = payload.player_id === "Black" ? "black" : "white"
@@ -200,6 +220,7 @@ export default function Home() {
       boardSize: settings.boardSize,
       mode,
       players: defaultPlayers,
+      forbiddenMoves: [],
     })
 
     // For online/AI modes, notify the server to start a new game
@@ -451,6 +472,7 @@ export default function Home() {
             showCoordinates={settings.showCoordinates}
             onCellClick={handleCellClick}
             disabled={gameState.status !== "playing"}
+            forbiddenMoves={gameState.forbiddenMoves}
           />
         </div>
         <div className="lg:flex lg:flex-col lg:items-end">

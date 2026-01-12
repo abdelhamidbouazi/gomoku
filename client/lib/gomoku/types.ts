@@ -31,6 +31,7 @@ export type GameState = {
     black: Player
     white: Player
   }
+  forbiddenMoves: Array<[number, number]>
 }
 
 export type GameSettings = {
