@@ -92,6 +92,6 @@ The client connects to the server via:
 
 ### Credits
 
-- Abdelhamid Bouazi (`abouaz`)
+- Abdelhamid Bouazi (`abouazi`)
 - Samy Tamim (`stamim`)
 
