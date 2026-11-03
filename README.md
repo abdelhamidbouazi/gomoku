@@ -59,20 +59,11 @@ Open **[localhost:3000](http://localhost:3000)**, select a game mode, and start 
 
 ## Run with Docker
 
-The repository includes images for both services. The checked-in Compose file has its port mappings commented out, so add a local override to expose them:
+The repository includes images for both services and publishes both ports. Copy the example environment file and start the stack:
 
 ```bash
-cat > compose.local.yaml <<'YAML'
-services:
-  server:
-    ports:
-      - "8000:8000"
-  client:
-    ports:
-      - "3000:3000"
-YAML
-
-docker compose -f docker-compose.yml -f compose.local.yaml up --build -d
+cp .env.example .env
+docker compose up --build -d
 ```
 
 Open **[localhost:3000](http://localhost:3000)** once both services are ready. This setup includes Rust, Python, and Node.js inside the images; only Docker with Compose is required on the host.
@@ -80,11 +71,11 @@ Open **[localhost:3000](http://localhost:3000)** once both services are ready. T
 View logs or stop the application with the same Compose files:
 
 ```bash
-docker compose -f docker-compose.yml -f compose.local.yaml logs -f
-docker compose -f docker-compose.yml -f compose.local.yaml down
+docker compose logs -f
+docker compose down
 ```
 
-The client image builds with `http://localhost:8000` as its browser-facing server URL. For access from another machine, update the build-stage `NEXT_PUBLIC_SOCKET_URL` in `client/Dockerfile` to a reachable server address and rebuild the client image.
+The client URL is baked into the Next.js build through `NEXT_PUBLIC_SOCKET_URL`. For Coolify, set that variable to the server's public domain in the Compose environment before deploying, then expose the client service on its own public domain. Do not use the internal Compose hostname (`server:8000`) for this value: the browser, rather than the client container, opens the Socket.IO connection.
 
 ## Game rules
 
@@ -158,7 +149,7 @@ NEXT_PUBLIC_SOCKET_URL=http://localhost:8000
 | --- | --- | --- |
 | Server `--port` | `8000` | Change the client socket URL to match |
 | Server `--board-size` | `19` | Keep at 19 when using the Python engine |
-| `NEXT_PUBLIC_SOCKET_URL` | `http://localhost:8000` | Must be reachable from the user's browser |
+| `NEXT_PUBLIC_SOCKET_URL` | `http://localhost:8000` | Must be reachable from the user's browser; set it before building |
 | `FREESOUND_API_KEY` | Unset | Optional server-side key for sound previews |
 
 Restart the development server after changing environment variables. Public Next.js variables are embedded during production builds, so rebuild the frontend when changing its socket URL. Keep API keys out of version control.

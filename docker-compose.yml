@@ -1,12 +1,18 @@
 services:
   server:
     build: .
-    # ports:
-    #  - "8000:8000"
+    ports:
+      - "${SERVER_PORT:-8000}:8000"
 
   client:
-    build: ./client
-    # ports:
-    #  - "3000:3000"
+    build:
+      context: ./client
+      args:
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:8000}
+    ports:
+      - "${CLIENT_PORT:-3000}:3000"
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
     depends_on:
       - server
