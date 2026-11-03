@@ -1,16 +1,16 @@
 services:
   server:
     build: .
-    ports:
-      - "${SERVER_PORT:-8000}:8000"
+    expose:
+      - "8000"
 
   client:
     build:
       context: ./client
       args:
         NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:8000}
-    ports:
-      - "${CLIENT_PORT:-3000}:3000"
+    expose:
+      - "3000"
     environment:
       HOSTNAME: 0.0.0.0
       PORT: 3000

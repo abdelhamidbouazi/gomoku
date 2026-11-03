@@ -59,14 +59,26 @@ Open **[localhost:3000](http://localhost:3000)**, select a game mode, and start 
 
 ## Run with Docker
 
-The repository includes images for both services and publishes both ports. Copy the example environment file and start the stack:
+The repository includes images for both services and exposes their internal ports for the Coolify proxy. Copy the example environment file and start the stack:
 
 ```bash
 cp .env.example .env
 docker compose up --build -d
 ```
 
-Open **[localhost:3000](http://localhost:3000)** once both services are ready. This setup includes Rust, Python, and Node.js inside the images; only Docker with Compose is required on the host.
+In Coolify, assign a public domain to the `client` service on port `3000` and a public domain to the `server` service on port `8000`. This setup includes Rust, Python, and Node.js inside the images; only Docker with Compose is required on the host.
+
+For Docker on a local machine, add host mappings in a separate override if you want to open `localhost:3000`:
+
+```yaml
+services:
+  server:
+    ports:
+      - "8000:8000"
+  client:
+    ports:
+      - "3000:3000"
+```
 
 View logs or stop the application with the same Compose files:
 
