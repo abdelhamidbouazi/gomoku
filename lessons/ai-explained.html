@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gomoku AI Deep Dive - Interactive Tutorial</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #7c3aed;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-medium: #1e293b;
+            --bg-light: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --code-bg: #1e293b;
+            --border-color: #475569;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1f35 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border-radius: 20px;
+            margin-bottom: 3rem;
+            box-shadow: 0 10px 40px rgba(37, 99, 235, 0.3);
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            opacity: 0.9;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            background: var(--bg-dark);
+            padding: 1rem;
+            z-index: 100;
+            border-radius: 15px;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-medium);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .tab-button:hover {
+            background: var(--bg-light);
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: var(--bg-medium);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.2);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            color: var(--secondary-color);
+            font-size: 1.5rem;
+            margin: 1.5rem 0 1rem;
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.5rem;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            color: #fbbf24;
+            font-size: 0.9rem;
+        }
+
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.9rem;
+            color: #e0e7ff;
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, var(--primary-color)20 0%, var(--secondary-color)20 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 4px solid var(--primary-color);
+            margin: 1.5rem 0;
+        }
+
+        .example-board {
+            display: inline-grid;
+            grid-template-columns: repeat(7, 35px);
+            gap: 2px;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--bg-light);
+            border-radius: 10px;
+        }
+
+        .cell {
+            width: 35px;
+            height: 35px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .cell.ai { color: var(--primary-color); }
+        .cell.opponent { color: var(--danger-color); }
+        .cell.empty { color: var(--text-secondary); opacity: 0.3; }
+
+        .algorithm-viz {
+            background: var(--bg-light);
+            padding: 2rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+        }
+
+        .tree-node {
+            background: var(--bg-medium);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 0.5rem;
+            display: inline-block;
+            min-width: 100px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .tree-node:hover {
+            border-color: var(--primary-color);
+            transform: scale(1.05);
+        }
+
+        .tree-node.max { border-color: var(--success-color); }
+        .tree-node.min { border-color: var(--danger-color); }
+        .tree-node.pruned { opacity: 0.4; text-decoration: line-through; }
+
+        .tree-level {
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 0.5rem;
+        }
+
+        .score-badge.high {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .score-badge.low {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .score-badge.neutral {
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, var(--bg-medium) 0%, var(--bg-light) 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-color);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .comparison-table th {
+            background: var(--bg-light);
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .comparison-table tr:hover {
+            background: var(--bg-light);
+        }
+
+        .interactive-demo {
+            background: var(--bg-light);
+            padding: 2rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .demo-button {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .demo-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.4);
+        }
+
+        .demo-button:active {
+            transform: scale(0.98);
+        }
+
+        .stats-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .stat-item {
+            background: var(--bg-dark);
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .pattern-example {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--bg-light);
+            border-radius: 10px;
+        }
+
+        .pattern-visual {
+            font-family: monospace;
+            font-size: 1.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-dark);
+            border-radius: 5px;
+        }
+
+        .pattern-info {
+            flex: 1;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: var(--bg-dark);
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .scroll-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .scroll-to-top:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.6);
+        }
+
+        .scroll-to-top.show {
+            display: flex;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .nav-tabs {
+                flex-direction: column;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .key-concept {
+            background: linear-gradient(135deg, #10b98120 0%, #06b6d420 100%);
+            border-left: 4px solid var(--success-color);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 10px;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #ef444420 0%, #dc262620 100%);
+            border-left: 4px solid var(--danger-color);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎮 Gomoku AI Deep Dive</h1>
+            <p class="subtitle">A Complete Interactive Guide to Game AI Algorithms</p>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="tab-button active" onclick="showSection('overview')">📖 Overview</button>
+            <button class="tab-button" onclick="showSection('minimax')">🌳 Minimax</button>
+            <button class="tab-button" onclick="showSection('heuristic')">🧠 Heuristic</button>
+            <button class="tab-button" onclick="showSection('rules')">⚖️ Rules</button>
+            <button class="tab-button" onclick="showSection('optimization')">⚡ Optimization</button>
+            <button class="tab-button" onclick="showSection('code')">💻 Code</button>
+        </nav>
+
+        <!-- OVERVIEW SECTION -->
+        <div id="overview" class="section active">
+            <div class="card">
+                <h2>🎯 What is Gomoku?</h2>
+                <p>Gomoku (Five in a Row) is a strategic board game played on a 19×19 grid. Two players alternate placing stones, and the goal is to create an unbroken line of five stones horizontally, vertically, or diagonally.</p>
+                
+                <div class="highlight">
+                    <h3>Special Rules in This Implementation:</h3>
+                    <ul>
+                        <li><strong>Captures:</strong> Pattern <code>X-O-O-X</code> captures the two opponent stones</li>
+                        <li><strong>Double-Three Rule:</strong> Cannot create two "free threes" with one move</li>
+                        <li><strong>Capture Win:</strong> Capturing 10+ stones wins the game</li>
+                        <li><strong>Breakable Five:</strong> A five can be broken by capturing one of its stones</li>
+                    </ul>
+                </div>
+
+                <div class="example-board">
+                    <div class="cell ai">X</div>
+                    <div class="cell opponent">O</div>
+                    <div class="cell opponent">O</div>
+                    <div class="cell ai">X</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                </div>
+                <p style="text-align: center; margin-top: 0.5rem; color: var(--text-secondary);">
+                    Capture Pattern: X captures the two O stones
+                </p>
+            </div>
+
+            <div class="card">
+                <h2>🏗️ Architecture Overview</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">📁</div>
+                        <h3>ai.py</h3>
+                        <p>Main entry point - orchestrates the move selection process</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔍</div>
+                        <h3>search.py</h3>
+                        <p>Minimax algorithm with alpha-beta pruning for exploring game tree</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🧮</div>
+                        <h3>heuristic.py</h3>
+                        <p>Board evaluation function - the AI's "intuition"</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚖️</div>
+                        <h3>rules.py</h3>
+                        <p>Game rules: legal moves, winning conditions, double-three detection</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎯</div>
+                        <h3>captures.py</h3>
+                        <p>Capture mechanics with undo support for efficient search</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎲</div>
+                        <h3>board.py</h3>
+                        <p>Board utilities, bounds checking, and helper functions</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Key Algorithms</h2>
+                <div class="algorithm-viz">
+                    <h3 style="text-align: center;">AI Decision Making Flow</h3>
+                    <div class="tree-level">
+                        <div class="tree-node">Start: Need to choose move</div>
+                    </div>
+                    <div style="text-align: center; font-size: 2rem; color: var(--border-color);">↓</div>
+                    <div class="tree-level">
+                        <div class="tree-node">Get legal moves</div>
+                        <div class="tree-node">Check immediate wins</div>
+                        <div class="tree-node">Check blocks needed</div>
+                    </div>
+                    <div style="text-align: center; font-size: 2rem; color: var(--border-color);">↓</div>
+                    <div class="tree-level">
+                        <div class="tree-node max">Iterative Deepening (depth 1→N)</div>
+                    </div>
+                    <div style="text-align: center; font-size: 2rem; color: var(--border-color);">↓</div>
+                    <div class="tree-level">
+                        <div class="tree-node min">Minimax + Alpha-Beta Pruning</div>
+                    </div>
+                    <div style="text-align: center; font-size: 2rem; color: var(--border-color);">↓</div>
+                    <div class="tree-level">
+                        <div class="tree-node">Heuristic Evaluation</div>
+                    </div>
+                    <div style="text-align: center; font-size: 2rem; color: var(--border-color);">↓</div>
+                    <div class="tree-level">
+                        <div class="tree-node" style="border-color: var(--success-color); background: var(--success-color)20;">Return Best Move</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MINIMAX SECTION -->
+        <div id="minimax" class="section">
+            <div class="card">
+                <h2>🌳 Minimax Algorithm</h2>
+                <p>Minimax is a decision-making algorithm for two-player games. It explores possible future moves by simulating both players playing optimally.</p>
+                
+                <div class="key-concept">
+                    <h3>Core Concept</h3>
+                    <p><strong>Maximizing Player (AI):</strong> Tries to maximize the score</p>
+                    <p><strong>Minimizing Player (Opponent):</strong> Tries to minimize the score</p>
+                    <p>The algorithm alternates between these two perspectives, recursively exploring the game tree.</p>
+                </div>
+
+                <h3>Game Tree Example</h3>
+                <div class="algorithm-viz">
+                    <div class="tree-level">
+                        <div class="tree-node max">MAX (AI's turn)</div>
+                    </div>
+                    <div style="text-align: center; font-size: 1.5rem; color: var(--border-color);">↙ ↓ ↘</div>
+                    <div class="tree-level">
+                        <div class="tree-node">Move A</div>
+                        <div class="tree-node">Move B</div>
+                        <div class="tree-node">Move C</div>
+                    </div>
+                    <div style="text-align: center; font-size: 1.5rem; color: var(--border-color);">↓ ↓ ↓</div>
+                    <div class="tree-level">
+                        <div class="tree-node min">MIN</div>
+                        <div class="tree-node min">MIN</div>
+                        <div class="tree-node min">MIN</div>
+                    </div>
+                    <div style="text-align: center; margin: 1rem 0;">
+                        <span class="score-badge high">Score: 5</span>
+                        <span class="score-badge low">Score: -2</span>
+                        <span class="score-badge neutral">Score: 3</span>
+                    </div>
+                    <p style="text-align: center; color: var(--success-color); font-weight: bold;">
+                        AI chooses Move A (highest score: 5)
+                    </p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>✂️ Alpha-Beta Pruning</h2>
+                <p>Alpha-beta pruning is an optimization that eliminates branches that cannot affect the final decision. This can reduce the search space by orders of magnitude!</p>
+
+                <div class="highlight">
+                    <h3>How It Works</h3>
+                    <ul>
+                        <li><strong>Alpha (α):</strong> Best score MAX player can guarantee (starts at -∞)</li>
+                        <li><strong>Beta (β):</strong> Best score MIN player can guarantee (starts at +∞)</li>
+                        <li><strong>Pruning Rule:</strong> If β ≤ α, stop exploring this branch</li>
+                    </ul>
+                </div>
+
+                <h3>Pruning Example</h3>
+                <div class="algorithm-viz">
+                    <div class="tree-level">
+                        <div class="tree-node max">MAX (α=-∞, β=+∞)</div>
+                    </div>
+                    <div style="text-align: center; font-size: 1.5rem; color: var(--border-color);">↙ ↘</div>
+                    <div class="tree-level">
+                        <div class="tree-node">Move A → Score: 5</div>
+                        <div class="tree-node">Move B → Exploring...</div>
+                    </div>
+                    <div style="text-align: center; font-size: 1.5rem; color: var(--border-color);">↓</div>
+                    <div class="tree-level">
+                        <div class="tree-node min">MIN (α=5, β=+∞)</div>
+                    </div>
+                    <div style="text-align: center; font-size: 1.5rem; color: var(--border-color);">↙ ↓ ↘</div>
+                    <div class="tree-level">
+                        <div class="tree-node">Child 1: -2</div>
+                        <div class="tree-node pruned">Child 2: PRUNED!</div>
+                        <div class="tree-node pruned">Child 3: PRUNED!</div>
+                    </div>
+                    <div class="warning-box">
+                        <strong>Why pruned?</strong> After finding -2, β becomes -2. Since -2 ≤ 5 (β ≤ α), 
+                        we know MAX won't choose Move B (it already has Move A with score 5). 
+                        No need to explore remaining children!
+                    </div>
+                </div>
+
+                <div class="stats-display">
+                    <div class="stat-item">
+                        <span class="stat-value">3-10x</span>
+                        <span class="stat-label">Speed Improvement</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">b^(d/2)</span>
+                        <span class="stat-label">Best Case Complexity</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">30-70%</span>
+                        <span class="stat-label">Nodes Pruned</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔄 Iterative Deepening</h2>
+                <p>Instead of searching to a fixed depth, iterative deepening searches depth 1, then 2, then 3, and so on until time runs out.</p>
+
+                <div class="interactive-demo">
+                    <h3>Iterative Deepening Visualization</h3>
+                    <div id="id-demo-display" style="margin: 2rem 0;">
+                        <div class="stat-item" style="display: inline-block; margin: 0 1rem;">
+                            <span class="stat-value" id="current-depth">1</span>
+                            <span class="stat-label">Current Depth</span>
+                        </div>
+                        <div class="stat-item" style="display: inline-block; margin: 0 1rem;">
+                            <span class="stat-value" id="nodes-searched">20</span>
+                            <span class="stat-label">Nodes Searched</span>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="time-progress" style="width: 0%">0ms / 500ms</div>
+                    </div>
+                    <button class="demo-button" onclick="startIterativeDeepening()">▶ Start Simulation</button>
+                    <button class="demo-button" onclick="resetIterativeDeepening()">🔄 Reset</button>
+                </div>
+
+                <div class="highlight">
+                    <h3>Benefits</h3>
+                    <ul>
+                        <li><strong>Time Control:</strong> Always returns a move within time limit</li>
+                        <li><strong>Better Move Ordering:</strong> Results from shallow searches improve deep searches</li>
+                        <li><strong>Anytime Algorithm:</strong> Always has a valid answer ready</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- HEURISTIC SECTION -->
+        <div id="heuristic" class="section">
+            <div class="card">
+                <h2>🧠 Heuristic Evaluation</h2>
+                <p>The heuristic function scores a board position when we can't search deeper. It's the AI's "intuition" about how good a position is.</p>
+
+                <div class="key-concept">
+                    <h3>Evaluation Formula</h3>
+                    <code>Score = AI_Patterns - Opponent_Patterns + Captures_Bonus</code>
+                    <p style="margin-top: 1rem;">Positive score = good for AI | Negative score = good for opponent</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📊 Pattern Scoring</h2>
+                <p>Different stone patterns have different values based on their strength and potential.</p>
+
+                <div class="pattern-example">
+                    <div class="pattern-visual">X X X X X</div>
+                    <div class="pattern-info">
+                        <strong>Five-in-a-Row</strong>
+                        <div class="score-badge high">50,000 points</div>
+                        <p>Winning position!</p>
+                    </div>
+                </div>
+
+                <div class="pattern-example">
+                    <div class="pattern-visual">_ X X X X _</div>
+                    <div class="pattern-info">
+                        <strong>Open Four (2 open ends)</strong>
+                        <div class="score-badge high">4,000 points</div>
+                        <p>Extremely dangerous - guaranteed win next move</p>
+                    </div>
+                </div>
+
+                <div class="pattern-example">
+                    <div class="pattern-visual"># X X X X _</div>
+                    <div class="pattern-info">
+                        <strong>Half-Open Four (1 open end)</strong>
+                        <div class="score-badge neutral">1,400 points</div>
+                        <p>Strong but blockable</p>
+                    </div>
+                </div>
+
+                <div class="pattern-example">
+                    <div class="pattern-visual">_ X X X _</div>
+                    <div class="pattern-info">
+                        <strong>Open Three (2 open ends)</strong>
+                        <div class="score-badge neutral">220 points</div>
+                        <p>Can become open four - requires attention</p>
+                    </div>
+                </div>
+
+                <div class="pattern-example">
+                    <div class="pattern-visual"># X X X _</div>
+                    <div class="pattern-info">
+                        <strong>Half-Open Three (1 open end)</strong>
+                        <div class="score-badge neutral">77 points</div>
+                        <p>Limited potential</p>
+                    </div>
+                </div>
+
+                <div class="pattern-example">
+                    <div class="pattern-visual">_ X X _</div>
+                    <div class="pattern-info">
+                        <strong>Open Two (2 open ends)</strong>
+                        <div class="score-badge neutral">25 points</div>
+                        <p>Good building block</p>
+                    </div>
+                </div>
+
+                <h3>Why Open Ends Matter</h3>
+                <div class="comparison-table">
+                    <table style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Open Ends</th>
+                                <th>Multiplier</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2 (Fully Open)</td>
+                                <td>1.0×</td>
+                                <td>Can extend in both directions - maximum potential</td>
+                            </tr>
+                            <tr>
+                                <td>1 (Half-Open)</td>
+                                <td>0.35×</td>
+                                <td>Can only extend one way - limited growth</td>
+                            </tr>
+                            <tr>
+                                <td>0 (Closed)</td>
+                                <td>0.08×</td>
+                                <td>Cannot extend - minimal threat</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Capture Bonus</h2>
+                <p>Captures are extremely valuable in Gomoku because they remove opponent threats and get you closer to the capture win condition (10 pairs).</p>
+
+                <div class="stats-display">
+                    <div class="stat-item">
+                        <span class="stat-value">+1,200</span>
+                        <span class="stat-label">Points per Capture</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">10 pairs</span>
+                        <span class="stat-label">Captures to Win</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">2 stones</span>
+                        <span class="stat-label">Stones per Capture</span>
+                    </div>
+                </div>
+
+                <div class="highlight">
+                    <h3>Why 1,200 points?</h3>
+                    <ul>
+                        <li>Higher than an open three (220) but less than an open four (4,000)</li>
+                        <li>Reflects both tactical value (removing threats) and strategic value (progress toward capture win)</li>
+                        <li>Encourages aggressive play without over-prioritizing captures</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🧮 Complete Evaluation Example</h2>
+                <div class="algorithm-viz">
+                    <h3 style="text-align: center;">Evaluating a Position</h3>
+                    
+                    <div style="margin: 2rem 0;">
+                        <h4>AI's Patterns:</h4>
+                        <ul>
+                            <li>1× Open Three: 220 points</li>
+                            <li>2× Half-Open Two: 2 × (25 × 0.35) = 17.5 points</li>
+                            <li>3× Single Stone: 3 × 3 = 9 points</li>
+                        </ul>
+                        <p><strong>AI Total: 246.5 points</strong></p>
+                    </div>
+
+                    <div style="margin: 2rem 0;">
+                        <h4>Opponent's Patterns:</h4>
+                        <ul>
+                            <li>1× Half-Open Three: 77 points</li>
+                            <li>1× Open Two: 25 points</li>
+                        </ul>
+                        <p><strong>Opponent Total: 102 points</strong></p>
+                    </div>
+
+                    <div style="margin: 2rem 0;">
+                        <h4>Captures:</h4>
+                        <ul>
+                            <li>AI Captures: 1 pair = 1,200 points</li>
+                            <li>Opponent Captures: 0 pairs = 0 points</li>
+                        </ul>
+                    </div>
+
+                    <div class="highlight">
+                        <h3 style="text-align: center;">Final Score</h3>
+                        <p style="text-align: center; font-size: 1.5rem;">
+                            246.5 (AI) - 102 (Opp) + 1,200 (Captures) = 
+                            <span style="color: var(--success-color); font-weight: bold;">+1,344.5</span>
+                        </p>
+                        <p style="text-align: center; color: var(--success-color);">
+                            ✓ Positive score: Good position for AI!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RULES SECTION -->
+        <div id="rules" class="section">
+            <div class="card">
+                <h2>⚖️ Game Rules Implementation</h2>
+                <p>The AI must respect all Gomoku rules, including some complex ones like the double-three rule and breakable fives.</p>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Five-in-a-Row Detection</h2>
+                <p>Checks if a position contains a line of 5 or more consecutive stones in any direction.</p>
+
+                <pre><code># Check 4 directions: horizontal, vertical, 2 diagonals
+DIRECTIONS = [
+    (1, 0),   # horizontal →
+    (0, 1),   # vertical ↓
+    (1, 1),   # diagonal ↘
+    (1, -1),  # diagonal ↗
+]
+
+# For each direction:
+# 1. Count stones going forward
+# 2. Count stones going backward
+# 3. If total ≥ 5, we have a five!</code></pre>
+
+                <div class="example-board">
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell ai">X</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell ai">X</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell ai">X</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell ai">X</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell ai">X</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                    <div class="cell empty">·</div>
+                </div>
+                <p style="text-align: center; color: var(--success-color);">✓ Five in a diagonal - AI wins!</p>
+            </div>
+
+            <div class="card">
+                <h2>🎣 Capture Mechanics</h2>
+                <p>The capture pattern <code>X-O-O-X</code> removes the two opponent stones and adds 2 to your capture count.</p>
+
+                <div class="algorithm-viz">
+                    <h3>Capture Pattern</h3>
+                    <div style="display: flex; justify-content: space-around; align-items: center; margin: 2rem 0;">
+                        <div>
+                            <h4 style="text-align: center; margin-bottom: 1rem;">Before</h4>
+                            <div class="example-board" style="margin: 0;">
+                                <div class="cell ai">X</div>
+                                <div class="cell opponent">O</div>
+                                <div class="cell opponent">O</div>
+                                <div class="cell empty">·</div>
+                            </div>
+                            <p style="text-align: center; margin-top: 0.5rem;">AI plays at →</p>
+                        </div>
+                        <div style="font-size: 3rem; color: var(--primary-color);">→</div>
+                        <div>
+                            <h4 style="text-align: center; margin-bottom: 1rem;">After</h4>
+                            <div class="example-board" style="margin: 0;">
+                                <div class="cell ai">X</div>
+                                <div class="cell empty">·</div>
+                                <div class="cell empty">·</div>
+                                <div class="cell ai">X</div>
+                            </div>
+                            <p style="text-align: center; margin-top: 0.5rem; color: var(--success-color);">Captured 2 stones!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="highlight">
+                    <h3>Capture Checking</h3>
+                    <p>After placing a stone, check all 8 directions (4 directions × 2 ways each):</p>
+                    <ol>
+                        <li>Check 3 cells away in that direction</li>
+                        <li>Pattern must be: Your Stone → Opponent → Opponent → Your Stone</li>
+                        <li>If found, remove the two opponent stones</li>
+                        <li>Add 2 to your capture count</li>
+                    </ol>
+                </div>
+
+                <div class="key-concept">
+                    <h3>Undo Support</h3>
+                    <p>The capture function returns a <strong>history</strong> of all changes:</p>
+                    <code>history = [(x1, y1, old_value1), (x2, y2, old_value2), ...]</code>
+                    <p style="margin-top: 1rem;">This allows the AI to try a move, evaluate it, then undo it perfectly - critical for minimax search!</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚠️ Double-Three Rule</h2>
+                <p>You cannot place a stone that creates two or more "free threes" simultaneously (unless it captures).</p>
+
+                <div class="key-concept">
+                    <h3>What is a "Free Three"?</h3>
+                    <p>A three-in-a-row where one more stone can create an open four (which guarantees a win).</p>
+                    
+                    <div class="pattern-example">
+                        <div class="pattern-visual">_ X X X _</div>
+                        <div class="pattern-info">
+                            <strong>Free Three (Open)</strong>
+                            <p>Can become open four with one move</p>
+                        </div>
+                    </div>
+
+                    <div class="pattern-example">
+                        <div class="pattern-visual"># X X X #</div>
+                        <div class="pattern-info">
+                            <strong>NOT a Free Three (Closed)</strong>
+                            <p>Cannot become open four</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <h3>Why This Rule Exists</h3>
+                    <p>Without this rule, the first player could create multiple simultaneous threats that are impossible to defend against, making the game unbalanced.</p>
+                </div>
+
+                <div class="highlight">
+                    <h3>Checking Algorithm</h3>
+                    <ol>
+                        <li>Temporarily place the stone</li>
+                        <li>Check if it made any captures (if yes, move is legal)</li>
+                        <li>Count how many free-threes exist at this position</li>
+                        <li>If count ≥ 2, the move is illegal</li>
+                        <li>Undo the temporary placement</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>💥 Breakable Five Rule</h2>
+                <p>A five-in-a-row can be broken by capturing one of its stones! The game only ends when a five exists that cannot be broken.</p>
+
+                <div class="algorithm-viz">
+                    <h3>Terminal State Check Order</h3>
+                    <div class="tree-level">
+                        <div class="tree-node">1. Check Capture Wins (10+ captures)</div>
+                    </div>
+                    <div style="text-align: center; font-size: 1.5rem; color: var(--border-color);">↓</div>
+                    <div class="tree-level">
+                        <div class="tree-node">2. Check Five-in-a-Rows</div>
+                    </div>
+                    <div style="text-align: center; font-size: 1.5rem; color: var(--border-color);">↓</div>
+                    <div class="tree-level">
+                        <div class="tree-node">3. Check if Five Can Be Broken by Capture</div>
+                    </div>
+                    <div style="text-align: center; font-size: 1.5rem; color: var(--border-color);">↓</div>
+                    <div class="tree-level">
+                        <div class="tree-node" style="border-color: var(--success-color);">If unbreakable → Game Over!</div>
+                        <div class="tree-node" style="border-color: var(--primary-color);">If breakable → Game Continues</div>
+                    </div>
+                </div>
+
+                <pre><code>def get_terminal_score(board, captures):
+    # 1. Capture wins take priority
+    if captures[AI] >= 10: return WIN_SCORE
+    if captures[OPP] >= 10: return LOSE_SCORE
+    
+    # 2. Check for fives
+    ai_has_five = has_player_won(board, AI)
+    opp_has_five = has_player_won(board, OPP)
+    
+    # 3. Check if five can be broken
+    if ai_has_five and not can_break_by_capture(board, AI):
+        return WIN_SCORE
+    if opp_has_five and not can_break_by_capture(board, OPP):
+        return LOSE_SCORE
+    
+    return None  # Game continues</code></pre>
+            </div>
+        </div>
+
+        <!-- OPTIMIZATION SECTION -->
+        <div id="optimization" class="section">
+            <div class="card">
+                <h2>⚡ Performance Optimizations</h2>
+                <p>Several techniques make the AI fast enough for real-time play while searching deep enough for strong play.</p>
+
+                <div class="stats-display">
+                    <div class="stat-item">
+                        <span class="stat-value">&lt;500ms</span>
+                        <span class="stat-label">Move Time</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">4-8</span>
+                        <span class="stat-label">Search Depth</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">10K-100K</span>
+                        <span class="stat-label">Nodes/Second</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">30-70%</span>
+                        <span class="stat-label">Pruning Rate</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Candidate Move Generation</h2>
+                <p>Instead of checking all 361 cells, only check empty cells near existing stones.</p>
+
+                <div class="comparison-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Approach</th>
+                                <th>Cells Checked</th>
+                                <th>Speed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Naive (all cells)</td>
+                                <td>361</td>
+                                <td>❌ Very Slow</td>
+                            </tr>
+                            <tr>
+                                <td>Neighbor-based (radius=2)</td>
+                                <td>~20-50</td>
+                                <td>✅ 7-18× Faster</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="highlight">
+                    <h3>Algorithm</h3>
+                    <ol>
+                        <li>Find all stones on the board</li>
+                        <li>For each stone, check neighbors within radius 2</li>
+                        <li>Collect all empty neighbors into a set (removes duplicates)</li>
+                        <li>Return as list of candidate moves</li>
+                    </ol>
+                </div>
+
+                <pre><code>NEIGHBOR_RADIUS = 2
+
+for stone in all_stones:
+    for dy in range(-RADIUS, RADIUS + 1):
+        for dx in range(-RADIUS, RADIUS + 1):
+            neighbor = stone + (dx, dy)
+            if is_empty(neighbor):
+                candidates.add(neighbor)</code></pre>
+
+                <div class="key-concept">
+                    <h3>Why Radius = 2?</h3>
+                    <p><strong>Radius 1:</strong> Too restrictive, misses some tactical moves</p>
+                    <p><strong>Radius 2:</strong> Sweet spot - captures most relevant moves</p>
+                    <p><strong>Radius 3+:</strong> Too many candidates, diminishing returns</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📊 Move Ordering</h2>
+                <p>Exploring better moves first dramatically increases alpha-beta pruning efficiency!</p>
+
+                <div class="algorithm-viz">
+                    <h3>Move Priority Order</h3>
+                    <div class="tree-level" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="tree-node" style="background: #10b98140; border-color: var(--success-color);">
+                            <strong>1. Immediate Wins</strong> (+1,000,000 priority)
+                        </div>
+                        <div class="tree-node" style="background: #3b82f640; border-color: var(--primary-color);">
+                            <strong>2. Capture Moves</strong> (+20,000 priority)
+                        </div>
+                        <div class="tree-node" style="background: #8b5cf640; border-color: var(--secondary-color);">
+                            <strong>3. High Heuristic Score</strong> (evaluate_board)
+                        </div>
+                        <div class="tree-node" style="background: var(--bg-light); border-color: var(--border-color);">
+                            <strong>4. Center Bias</strong> (slight preference)
+                        </div>
+                    </div>
+                </div>
+
+                <div class="highlight">
+                    <h3>Impact Example</h3>
+                    <div class="stats-display">
+                        <div class="stat-item">
+                            <span class="stat-value">No Ordering</span>
+                            <span class="stat-label">100,000 nodes</span>
+                        </div>
+                        <div class="stat-item" style="font-size: 2rem; color: var(--primary-color);">→</div>
+                        <div class="stat-item">
+                            <span class="stat-value" style="color: var(--success-color);">With Ordering</span>
+                            <span class="stat-label">30,000 nodes</span>
+                        </div>
+                    </div>
+                    <p style="text-align: center; margin-top: 1rem; color: var(--success-color);">
+                        <strong>70% reduction in nodes explored!</strong>
+                    </p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>💾 Transposition Table</h2>
+                <p>Cache evaluated positions to avoid recalculating the same position multiple times.</p>
+
+                <div class="key-concept">
+                    <h3>Position Key</h3>
+                    <code>key = (board_state, ai_captures, opp_captures, current_player, depth)</code>
+                    <p style="margin-top: 1rem;">Before evaluating, check if this exact position was already seen. If yes, return cached score instantly!</p>
+                </div>
+
+                <div class="algorithm-viz">
+                    <h3>How It Works</h3>
+                    <div style="margin: 2rem 0;">
+                        <div style="display: flex; justify-content: space-around; align-items: center;">
+                            <div class="tree-node">Position A<br/>↓<br/>Evaluate: 100ms</div>
+                            <div class="tree-node">Position B<br/>↓<br/>Evaluate: 100ms</div>
+                        </div>
+                        <p style="text-align: center; margin: 1rem 0; color: var(--text-secondary);">
+                            Both lead to same position C via different paths...
+                        </p>
+                        <div style="display: flex; justify-content: space-around; align-items: center;">
+                            <div class="tree-node" style="border-color: var(--success-color);">
+                                Position C<br/>✓ Already evaluated!<br/>0.001ms (from cache)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-display">
+                    <div class="stat-item">
+                        <span class="stat-value">~10-30%</span>
+                        <span class="stat-label">Cache Hit Rate</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">1000×</span>
+                        <span class="stat-label">Speedup per Hit</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">Few MB</span>
+                        <span class="stat-label">Memory Usage</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Quick Win/Block Detection</h2>
+                <p>Before starting expensive minimax, check for immediate wins or must-block moves.</p>
+
+                <div class="algorithm-viz">
+                    <div class="tree-level">
+                        <div class="tree-node">Check: Can I win immediately?</div>
+                    </div>
+                    <div style="text-align: center; margin: 0.5rem 0;">
+                        <span style="color: var(--success-color);">✓ Yes → Return that move (1 node)</span><br/>
+                        <span style="color: var(--text-secondary);">✗ No → Continue checking</span>
+                    </div>
+                    <div class="tree-level">
+                        <div class="tree-node">Check: Can opponent win next turn?</div>
+                    </div>
+                    <div style="text-align: center; margin: 0.5rem 0;">
+                        <span style="color: var(--danger-color);">✓ Yes → Block immediately (~20 nodes)</span><br/>
+                        <span style="color: var(--text-secondary);">✗ No → Start full minimax search</span>
+                    </div>
+                    <div class="tree-level">
+                        <div class="tree-node">Full minimax search (~10,000-100,000 nodes)</div>
+                    </div>
+                </div>
+
+                <div class="highlight">
+                    <h3>Benefit</h3>
+                    <p>In critical situations (immediate win/loss), gives instant response instead of wasting time on deep search.</p>
+                    <p><strong>Speed:</strong> 1-20 nodes vs 10,000-100,000 nodes = <span style="color: var(--success-color);">1000-10,000× faster</span></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📈 Complexity Analysis</h2>
+                
+                <h3>Without Optimizations</h3>
+                <div class="comparison-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Factor</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Branching factor (b)</td>
+                                <td>~361 (all cells)</td>
+                            </tr>
+                            <tr>
+                                <td>Depth (d)</td>
+                                <td>6</td>
+                            </tr>
+                            <tr>
+                                <td>Nodes explored</td>
+                                <td>361^6 ≈ 2.6 × 10^15 (quadrillions!)</td>
+                            </tr>
+                            <tr>
+                                <td>Time at 100K nodes/sec</td>
+                                <td>~826 million years 💀</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>With All Optimizations</h3>
+                <div class="comparison-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Factor</th>
+                                <th>Value</th>
+                                <th>Improvement</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Branching factor</td>
+                                <td>~30 (candidate moves)</td>
+                                <td>12× reduction</td>
+                            </tr>
+                            <tr>
+                                <td>Effective depth (α-β pruning)</td>
+                                <td>~3 (from 6)</td>
+                                <td>Best case: √d</td>
+                            </tr>
+                            <tr>
+                                <td>Nodes explored</td>
+                                <td>~27,000</td>
+                                <td>96 trillion× reduction!</td>
+                            </tr>
+                            <tr>
+                                <td>Time at 100K nodes/sec</td>
+                                <td><strong>~270ms</strong> ✅</td>
+                                <td>Real-time!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="key-concept">
+                    <h3>Combined Impact</h3>
+                    <p style="font-size: 1.5rem; text-align: center; margin: 2rem 0;">
+                        826 million years → <span style="color: var(--success-color);">0.27 seconds</span>
+                    </p>
+                    <p style="text-align: center; color: var(--text-secondary);">
+                        This is the power of algorithmic optimization!
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CODE SECTION -->
+        <div id="code" class="section">
+            <div class="card">
+                <h2>💻 Core Code Examples</h2>
+                <p>Here are the key functions that make everything work together.</p>
+            </div>
+
+            <div class="card">
+                <h3>Main Entry Point</h3>
+                <pre><code>def choose_best_move_with_stats(
+    board: Board,
+    max_depth: int = 10,
+    ai_captures: int = 0,
+    opponent_captures: int = 0,
+    time_limit_ms: int = 450,
+) -> SearchResult:
+    """
+    Main AI function: Choose the best move.
+    Returns: (move, score, depth_reached, stats)
+    """
+    start_time = perf_counter()
+    
+    # Setup
+    captures = {AI_PLAYER: ai_captures, OPPONENT_PLAYER: opponent_captures}
+    legal_moves = get_legal_moves(board, AI_PLAYER, captures)
+    
+    # Quick checks
+    for x, y in legal_moves:
+        # Check immediate win
+        history = apply_move_with_captures(board, x, y, AI_PLAYER, captures)
+        if get_terminal_score(board, captures) == WIN_SCORE:
+            undo_move_with_captures(board, captures, AI_PLAYER, history)
+            return SearchResult((x, y), WIN_SCORE, 1, stats)
+        undo_move_with_captures(board, captures, AI_PLAYER, history)
+    
+    # Check must-block moves
+    # ... similar logic for opponent threats ...
+    
+    # Order moves for better pruning
+    legal_moves = order_moves(board, captures, AI_PLAYER, legal_moves)
+    
+    # Iterative deepening
+    best_move = None
+    for depth in range(1, max_depth + 1):
+        if elapsed_time >= time_limit_ms:
+            break
+        
+        for x, y in legal_moves:
+            history = apply_move_with_captures(board, x, y, AI_PLAYER, captures)
+            score = minimax(board, captures, depth - 1, -∞, +∞, False, ...)
+            undo_move_with_captures(board, captures, AI_PLAYER, history)
+            
+            if score > best_score:
+                best_move = (x, y)
+                best_score = score
+    
+    return SearchResult(best_move, best_score, depth_reached, stats)</code></pre>
+            </div>
+
+            <div class="card">
+                <h3>Minimax with Alpha-Beta Pruning</h3>
+                <pre><code>def minimax(board, captures, depth, alpha, beta, maximizing, ...) -> float:
+    """
+    Recursive minimax with alpha-beta pruning.
+    Returns: Best score from this position
+    """
+    # Base cases
+    terminal = get_terminal_score(board, captures)
+    if terminal is not None:
+        return terminal
+    
+    if depth == 0:
+        return evaluate_board(board, captures)
+    
+    # Check transposition table
+    key = (board_key(board), captures[AI], captures[OPP], player, depth)
+    if key in table:
+        return table[key]
+    
+    # Get and order moves
+    moves = get_legal_moves(board, current_player, captures)
+    moves = order_moves(board, captures, current_player, moves)
+    
+    # Maximizing player (AI)
+    if maximizing:
+        best = -∞
+        for move in moves:
+            history = apply_move_with_captures(board, move, AI_PLAYER, captures)
+            score = minimax(board, captures, depth-1, alpha, beta, False, ...)
+            undo_move_with_captures(board, captures, AI_PLAYER, history)
+            
+            best = max(best, score)
+            alpha = max(alpha, best)
+            
+            if beta <= alpha:  # Prune!
+                break
+        
+        table[key] = best
+        return best
+    
+    # Minimizing player (Opponent) - similar but inverted
+    else:
+        best = +∞
+        for move in moves:
+            history = apply_move_with_captures(board, move, OPP, captures)
+            score = minimax(board, captures, depth-1, alpha, beta, True, ...)
+            undo_move_with_captures(board, captures, OPP, history)
+            
+            best = min(best, score)
+            beta = min(beta, best)
+            
+            if beta <= alpha:  # Prune!
+                break
+        
+        table[key] = best
+        return best</code></pre>
+            </div>
+
+            <div class="card">
+                <h3>Board Evaluation</h3>
+                <pre><code>def evaluate_board(board: Board, captures: Dict[int, int]) -> float:
+    """
+    Heuristic evaluation from AI perspective.
+    Positive = good for AI, negative = good for opponent.
+    """
+    # Score patterns for both players
+    ai_score = score_player(board, AI_PLAYER)
+    opp_score = score_player(board, OPPONENT_PLAYER)
+    
+    # Pattern difference
+    score = ai_score - opp_score
+    
+    # Capture bonus
+    score += captures[AI_PLAYER] * 1200
+    score -= captures[OPPONENT_PLAYER] * 1200
+    
+    return score
+
+def score_player(board: Board, player: int) -> float:
+    """Find and score all patterns for one player."""
+    total = 0.0
+    
+    for y in range(BOARD_SIZE):
+        for x in range(BOARD_SIZE):
+            if board[y][x] != player:
+                continue
+            
+            # Check each direction
+            for dx, dy in DIRECTIONS:
+                # Only count each streak once
+                if is_continuation(board, x, y, dx, dy, player):
+                    continue
+                
+                # Count consecutive stones
+                length = count_line(board, x, y, dx, dy, player)
+                
+                # Check open ends
+                open_ends = count_open_ends(board, x, y, dx, dy, length, player)
+                
+                # Add pattern score
+                total += pattern_score(length, open_ends)
+    
+    return total
+
+def pattern_score(length: int, open_ends: int) -> float:
+    """Score a single pattern."""
+    if length >= 5:
+        return 50_000.0
+    
+    base = {1: 3, 2: 25, 3: 220, 4: 4_000}.get(length, 0)
+    
+    if open_ends == 2:
+        return float(base)
+    elif open_ends == 1:
+        return float(base) * 0.35
+    else:
+        return float(base) * 0.08</code></pre>
+            </div>
+
+            <div class="card">
+                <h3>Capture Logic with Undo</h3>
+                <pre><code>def apply_move_with_captures(
+    board: Board,
+    x: int, y: int,
+    player: int,
+    captures: Dict[int, int]
+) -> List[Tuple[int, int, int]]:
+    """
+    Place move and apply captures.
+    Returns history for undo: [(x, y, old_value), ...]
+    """
+    # Place stone
+    board[y][x] = player
+    history = [(x, y, EMPTY)]
+    
+    opponent = get_opponent(player)
+    
+    # Check all 8 directions for captures
+    for dx, dy in DIRECTIONS:
+        for sign in (1, -1):
+            sdx, sdy = dx * sign, dy * sign
+            
+            # Check pattern: X-O-O-X
+            x1, y1 = x + sdx, y + sdy
+            x2, y2 = x + 2*sdx, y + 2*sdy
+            x3, y3 = x + 3*sdx, y + 3*sdy
+            
+            if not all_in_bounds(x1, y1, x2, y2, x3, y3):
+                continue
+            
+            if (board[y1][x1] == opponent and
+                board[y2][x2] == opponent and
+                board[y3][x3] == player):
+                
+                # Record changes
+                history.append((x1, y1, opponent))
+                history.append((x2, y2, opponent))
+                
+                # Remove stones
+                board[y1][x1] = EMPTY
+                board[y2][x2] = EMPTY
+                
+                # Update count
+                captures[player] += 2
+    
+    return history
+
+def undo_move_with_captures(
+    board: Board,
+    captures: Dict[int, int],
+    player: int,
+    history: List[Tuple[int, int, int]]
+) -> None:
+    """Undo a move perfectly."""
+    # Restore capture count
+    removed_count = len(history) - 1
+    captures[player] -= removed_count
+    
+    # Restore all cells
+    for x, y, old_value in reversed(history):
+        board[y][x] = old_value</code></pre>
+            </div>
+
+            <div class="card">
+                <h3>Move Ordering</h3>
+                <pre><code>def order_moves(board, captures, player, moves) -> List[Move]:
+    """Sort moves from most to least promising."""
+    return sorted(
+        moves,
+        key=lambda m: move_order_score(board, captures, player, m),
+        reverse=True  # Highest score first
+    )
+
+def move_order_score(board, captures, player, move) -> float:
+    """Quick score for move ordering."""
+    x, y = move
+    score = 0.0
+    
+    # 1. Center bias (slight)
+    center = BOARD_SIZE // 2
+    distance = abs(x - center) + abs(y - center)
+    score -= distance * 2
+    
+    # 2. Try the move
+    history = apply_move_with_captures(board, x, y, player, captures)
+    
+    # 3. Immediate win? Huge priority!
+    terminal = get_terminal_score(board, captures)
+    if terminal and (
+        (player == AI_PLAYER and terminal > 0) or
+        (player == OPPONENT_PLAYER and terminal < 0)
+    ):
+        score += 1_000_000
+    
+    # 4. Capture move? High priority
+    if len(history) > 1:
+        score += 20_000
+    
+    # 5. Add heuristic
+    raw = evaluate_board(board, captures)
+    score += raw if player == AI_PLAYER else -raw
+    
+    # 6. Undo
+    undo_move_with_captures(board, captures, player, history)
+    
+    return score</code></pre>
+            </div>
+
+            <div class="card">
+                <h2>🔗 Putting It All Together</h2>
+                <div class="algorithm-viz">
+                    <h3 style="text-align: center;">Complete AI Flow</h3>
+                    
+                    <div style="margin: 2rem 0; line-height: 2;">
+                        <p><strong>1. Entry:</strong> <code>choose_best_move(board, ...)</code></p>
+                        <p style="margin-left: 2rem;">↓ Get legal moves</p>
+                        <p style="margin-left: 2rem;">↓ Quick win/block check</p>
+                        
+                        <p><strong>2. Iterative Deepening:</strong> depth = 1, 2, 3...</p>
+                        <p style="margin-left: 2rem;">↓ Order moves (best first)</p>
+                        
+                        <p><strong>3. For each move:</strong></p>
+                        <p style="margin-left: 2rem;">↓ Apply move + captures</p>
+                        <p style="margin-left: 2rem;">↓ Call minimax(depth-1, ...)</p>
+                        
+                        <p><strong>4. Minimax recursively:</strong></p>
+                        <p style="margin-left: 2rem;">↓ Check terminal / depth limit</p>
+                        <p style="margin-left: 2rem;">↓ Check transposition table</p>
+                        <p style="margin-left: 2rem;">↓ Get & order legal moves</p>
+                        <p style="margin-left: 2rem;">↓ Try each move recursively</p>
+                        <p style="margin-left: 2rem;">↓ Alpha-beta prune when possible</p>
+                        <p style="margin-left: 2rem;">↓ Cache result in table</p>
+                        
+                        <p><strong>5. Base case: Evaluate board</strong></p>
+                        <p style="margin-left: 2rem;">↓ Score AI patterns</p>
+                        <p style="margin-left: 2rem;">↓ Score opponent patterns</p>
+                        <p style="margin-left: 2rem;">↓ Add capture bonuses</p>
+                        <p style="margin-left: 2rem;">↓ Return score</p>
+                        
+                        <p><strong>6. Unwind recursion, undo moves</strong></p>
+                        <p><strong>7. Return best move found</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Created with ❤️ for learning Game AI</p>
+            <p>Gomoku AI Implementation © 2026</p>
+        </footer>
+    </div>
+
+    <button class="scroll-to-top" onclick="scrollToTop()">↑</button>
+
+    <script>
+        // Tab switching
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active from all buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Activate clicked button
+            event.target.classList.add('active');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Scroll to top button
+        window.addEventListener('scroll', () => {
+            const scrollButton = document.querySelector('.scroll-to-top');
+            if (window.scrollY > 300) {
+                scrollButton.classList.add('show');
+            } else {
+                scrollButton.classList.remove('show');
+            }
+        });
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Iterative deepening simulation
+        let idInterval = null;
+        let idTimeElapsed = 0;
+        let idDepth = 1;
+        let idNodes = 0;
+
+        function startIterativeDeepening() {
+            if (idInterval) return; // Already running
+            
+            idTimeElapsed = 0;
+            idDepth = 1;
+            idNodes = 0;
+            
+            updateIDDisplay();
+            
+            idInterval = setInterval(() => {
+                idTimeElapsed += 50;
+                
+                // Simulate exponential node growth with depth
+                const nodesThisDepth = Math.pow(30, idDepth);
+                idNodes += Math.floor(nodesThisDepth / 20); // Simulate incremental search
+                
+                updateIDDisplay();
+                
+                // Move to next depth when "finishing" current depth
+                if (idTimeElapsed % 150 === 0 && idDepth < 6) {
+                    idDepth++;
+                }
+                
+                if (idTimeElapsed >= 500) {
+                    clearInterval(idInterval);
+                    idInterval = null;
+                }
+            }, 50);
+        }
+
+        function resetIterativeDeepening() {
+            if (idInterval) {
+                clearInterval(idInterval);
+                idInterval = null;
+            }
+            idTimeElapsed = 0;
+            idDepth = 1;
+            idNodes = 0;
+            updateIDDisplay();
+        }
+
+        function updateIDDisplay() {
+            document.getElementById('current-depth').textContent = idDepth;
+            document.getElementById('nodes-searched').textContent = idNodes.toLocaleString();
+            
+            const progress = (idTimeElapsed / 500) * 100;
+            const progressBar = document.getElementById('time-progress');
+            progressBar.style.width = progress + '%';
+            progressBar.textContent = `${idTimeElapsed}ms / 500ms`;
+        }
+
+        // Add smooth animations on load
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.card').forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+            });
+        });
+    </script>
+</body>
+</html>
